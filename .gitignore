@@ -1,0 +1,6 @@
+node_modules/
+bk-data/
+.env
+*.log
+*.bak-*
+bk-test/

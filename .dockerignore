@@ -1,0 +1,13 @@
+node_modules
+bk-data
+bk-test
+_work
+.git
+.gitignore
+.env
+*.log
+*.bak-*
+Dockerfile
+.dockerignore
+README.md
+RENDER-DEPLOY-NOTES.md

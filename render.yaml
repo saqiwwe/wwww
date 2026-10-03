@@ -1,0 +1,79 @@
+# ============================================================================
+#  Blue Knight Gate — Render Blueprint
+#  Push this folder to a Git repo, then in Render: New > Blueprint > pick the repo.
+#  Render reads this file, creates the web service and deploys it.
+#  Docs: https://render.com/docs/blueprint-spec
+# ============================================================================
+services:
+  - type: web
+    name: blue-knight-gate
+    runtime: node
+    # `free` = no payment method needed. Free instances sleep after ~15 idle minutes and
+    # cannot have a disk; the app keeps itself awake and pins its identity via the
+    # environment variables below, so it still works. See README for the caveats.
+    plan: free
+    # Closest region for Iran / the Middle East. Other choices: oregon, ohio, virginia, singapore.
+    # NOTE: the region cannot be changed after the service is created.
+    region: frankfurt
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm ci --omit=dev
+    startCommand: node index.js
+    # Unauthenticated 200 endpoint served by the app as soon as the port is bound.
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # --- Pinned identity -------------------------------------------------------------
+      # A Free instance has no persistent disk, so the data folder is thrown away on every
+      # deploy, restart and wake-up. Without these the UUID, subscription token and panel
+      # password would be regenerated each time and every config already handed out would
+      # stop authenticating. Render generates each value once and keeps it across deploys.
+      # UUID must be a real UUID (or any stable string — the app derives a UUID from it).
+      - key: UUID
+        generateValue: true
+      - key: SUB_TOKEN
+        generateValue: true
+      # Set a panel password of 8+ characters when Render prompts for it. Leave it blank and
+      # the panel asks you to create one on first visit (and re-asks after every redeploy).
+      - key: PANEL_PASSWORD
+        sync: false
+
+      # --- Behaviour -------------------------------------------------------------------
+      # Ping our own public URL every 10 minutes so a Free instance does not sleep.
+      # Set to "false" to let it sleep (saves instance hours, but the proxy goes offline).
+      - key: KEEP_ALIVE
+        value: "true"
+      # Monthly allowance (GiB) drawn as the progress bar in the Usage tab. Remove for no bar.
+      - key: TRAFFIC_LIMIT_GB
+        value: "100"
+
+      # --- Optional overrides (uncomment as needed) -------------------------------------
+      # Force the host used in every config / subscription link. Leave unset to use the
+      # hostname you opened the panel with (works with custom domains automatically).
+      # - key: DOMAIN
+      #   value: panel.example.com
+      # Extra key required when the panel password is first created.
+      # - key: SETUP_KEY
+      #   value: some-long-random-key
+      # Forgot the panel password: set this, redeploy, create a new one, then delete it.
+      # - key: RESET_PANEL_PASSWORD
+      #   value: "true"
+      # Data folder. Leave unset: the app picks the disk mount automatically when one exists.
+      # - key: BK_DATA_DIR
+      #   value: /var/data
+
+    # ==================================================================================
+    #  Persistent disk — PAID INSTANCES ONLY.
+    #  To enable: change `plan: free` above to `0.5c-512mb` (or larger) and uncomment this
+    #  block. Then the UUID, panel password, traffic counters and the downloaded
+    #  sing-box / Xray binaries all survive deploys and restarts, and no environment
+    #  variable is needed to keep configs working. Do NOT set BK_DATA_DIR when using the
+    #  disk: the app reads the mount path from RENDER_DISK_PATH by itself.
+    #  (Render injects RENDER_DISK_PATH automatically, so the app finds it either way.)
+    # ==================================================================================
+    # disk:
+    #   name: blue-knight-data
+    #   mountPath: /var/data
+    #   sizeGB: 10
